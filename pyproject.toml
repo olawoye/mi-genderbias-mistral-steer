@@ -1,0 +1,30 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "mi-genderbias-mistral-steer"
+version = "0.1.0"
+description = "Mechanistic interpretability of occupational gender bias in Mistral-7B: linear probes, difference-of-means directions and activation steering."
+requires-python = ">=3.10"
+license = { text = "MIT" }
+# torch is pre-installed on Colab; locally install the CPU build first (see README).
+dependencies = [
+  "scikit-learn",
+  "transformers>=4.45",
+  "accelerate>=0.33",
+  "numpy",
+  "pandas",
+  "scipy",
+  "matplotlib",
+  "tqdm",
+]
+
+[project.optional-dependencies]
+dev = ["pytest", "ipykernel"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
