@@ -6,6 +6,19 @@ from dataclasses import dataclass, field, replace
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
+DRIVE_ROOT = Path("/content/drive/MyDrive")
+
+
+def on_colab() -> bool:
+    return "COLAB_RELEASE_TAG" in os.environ or Path("/content").exists()
+
+
+def _drive_or_local(env_var: str, sub: str, local: Path) -> Path:
+    """$env_var if set, else a Drive path on Colab (survives runtime resets), else repo-local."""
+    env = os.environ.get(env_var)
+    if env:
+        return Path(env)
+    return DRIVE_ROOT / sub if on_colab() else local
 
 
 @dataclass(frozen=True)
@@ -23,11 +36,10 @@ class Config:
     steer_layer: int | None = None
 
     seed: int = 0
-    results_dir: Path = field(default_factory=lambda: REPO_ROOT / "results")
-    # On Colab, cache heavy activations on Drive so a runtime reset doesn't lose them.
-    cache_dir: Path = field(default_factory=lambda: Path(
-        os.environ.get("MIBIAS_CACHE", "/content/drive/MyDrive/mibias_cache/mistral")
-    ))
+    # Checkpoints + results go to Drive on Colab. `checkpoint.export_results` copies the
+    # final JSON/PNGs into the repo's results/ folder for committing.
+    results_dir: Path = field(default_factory=lambda: _drive_or_local("MIBIAS_RESULTS", "mibias_results/mistral", REPO_ROOT / "results"))
+    cache_dir: Path = field(default_factory=lambda: _drive_or_local("MIBIAS_CACHE", "mibias_cache/mistral", REPO_ROOT / ".cache"))
 
 
 def get_config(smoke: bool | None = None) -> Config:
@@ -37,5 +49,6 @@ def get_config(smoke: bool | None = None) -> Config:
         smoke = os.environ.get("MIBIAS_SMOKE") == "1"
     if smoke:
         cfg = replace(cfg, model_id=cfg.smoke_model_id, n_layers=None, d_model=None,
-                      cache_dir=REPO_ROOT / ".cache")
+                      cache_dir=REPO_ROOT / ".cache" / "smoke",
+                      results_dir=REPO_ROOT / ".cache" / "smoke_results")
     return cfg
